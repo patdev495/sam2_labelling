@@ -1,11 +1,12 @@
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QBrush
+from PySide6.QtGui import QColor, QBrush, QIcon
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QListWidget, QListWidgetItem,
     QPushButton, QHBoxLayout, QLabel,
 )
 
 from auto_labelling.models.track import Track
+from auto_labelling.app.theme import icon as theme_icon
 
 
 class TrackListPanel(QWidget):
@@ -29,8 +30,9 @@ class TrackListPanel(QWidget):
         header.addWidget(title)
         header.addStretch()
 
-        self._add_btn = QPushButton("+")
-        self._add_btn.setFixedSize(24, 24)
+        self._add_btn = QPushButton()
+        self._add_btn.setIcon(theme_icon("plus"))
+        self._add_btn.setFixedSize(32, 32)
         self._add_btn.setToolTip("Add new track (enter prompt mode)")
         self._add_btn.clicked.connect(self.add_track_requested.emit)
         header.addWidget(self._add_btn)

@@ -1,8 +1,9 @@
 from PySide6.QtCore import Qt, Signal, QTimer
-from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QMouseEvent, QPaintEvent
+from PySide6.QtGui import QPainter, QColor, QPen, QBrush, QMouseEvent, QPaintEvent, QIcon
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QSlider, QLabel, QStyle
 
 from auto_labelling.models.track import Track
+from auto_labelling.app.theme import icon as theme_icon
 
 
 class TimelineWidget(QWidget):
@@ -28,8 +29,8 @@ class TimelineWidget(QWidget):
         layout.setContentsMargins(4, 2, 4, 2)
 
         self._play_btn = QPushButton()
-        self._play_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
-        self._play_btn.setFixedSize(28, 28)
+        self._play_btn.setIcon(theme_icon("play"))
+        self._play_btn.setFixedSize(32, 32)
         self._play_btn.clicked.connect(self._on_play)
         layout.addWidget(self._play_btn)
 
@@ -74,11 +75,11 @@ class TimelineWidget(QWidget):
     def _on_play(self):
         self._playing = not self._playing
         if self._playing:
-            self._play_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPause))
+            self._play_btn.setIcon(theme_icon("pause"))
             interval = int(1000 / self._play_fps)
             self._timer.start(interval)
         else:
-            self._play_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+            self._play_btn.setIcon(theme_icon("play"))
             self._timer.stop()
         self.play_toggled.emit(self._playing)
 

@@ -29,6 +29,7 @@ from auto_labelling.widgets.track_list import TrackListPanel
 from auto_labelling.widgets.properties import PropertiesPanel
 from auto_labelling.widgets.extract_dialog import ExtractDialog
 from auto_labelling.widgets.shortcuts_dialog import ShortcutSettingsDialog
+from auto_labelling.app.theme import icon
 
 
 class MainWindow(QMainWindow):
@@ -56,41 +57,41 @@ class MainWindow(QMainWindow):
     def _setup_actions(self):
         sc = self._shortcuts
 
-        self.action_open_folder = self._make_action("&Open Folder...", "open_video")
-        self.action_extract_frames = self._make_action("&Extract Frames...", "extract_frames")
-        self.action_auto_label = self._make_action("&Auto Label", "auto_label")
+        self.action_open_folder = self._make_action("Open Folder", "open_video", "folder")
+        self.action_extract_frames = self._make_action("Extract Frames", "extract_frames", "extract")
+        self.action_auto_label = self._make_action("Auto Label", "auto_label", "auto_label")
         self.action_auto_label.setEnabled(False)
-        self.action_export = self._make_action("E&xport Labels", "save")
+        self.action_export = self._make_action("Export Labels", "save", "export")
         self.action_export.setEnabled(False)
 
-        self.action_undo = self._make_action("&Undo", "undo")
+        self.action_undo = self._make_action("Undo", "undo", "undo")
         self.action_undo.setEnabled(False)
-        self.action_redo = self._make_action("&Redo", "redo")
+        self.action_redo = self._make_action("Redo", "redo", "redo")
         self.action_redo.setEnabled(False)
 
-        self.action_toggle_masks = QAction("Show &Masks", self)
+        self.action_toggle_masks = QAction(icon("mask"), "Show Masks", self)
         self.action_toggle_masks.setCheckable(True)
         self.action_toggle_masks.setChecked(False)
 
         # Frame navigation
-        self.action_next_frame = self._make_action("Next Frame", "next_frame")
-        self.action_prev_frame = self._make_action("Prev Frame", "prev_frame")
-        self.action_play_pause = self._make_action("Play/Pause", "play_pause")
+        self.action_next_frame = self._make_action("Next Frame", "next_frame", "next")
+        self.action_prev_frame = self._make_action("Prev Frame", "prev_frame", "prev")
+        self.action_play_pause = self._make_action("Play/Pause", "play_pause", "play")
 
-        # Box editing (context-sensitive, handled in _on_canvas_key_action)
-        self.action_delete_box = self._make_action("Delete Box", "delete_box")
-        self.action_draw_box = self._make_action("Draw Box", "draw_box")
+        # Box editing
+        self.action_delete_box = self._make_action("Delete Box", "delete_box", "trash")
+        self.action_draw_box = self._make_action("Draw Box", "draw_box", "edit")
 
-        self.action_shortcuts = QAction("Shortcuts...", self)
-        self.action_quit = QAction("&Quit", self)
+        self.action_shortcuts = QAction(icon("settings"), "Shortcuts...", self)
+        self.action_quit = QAction("Quit", self)
         self.action_quit.setShortcut(QKeySequence.Quit)
 
-    def _make_action(self, text: str, shortcut_key: str) -> QAction:
-        action = QAction(text, self)
+    def _make_action(self, text: str, shortcut_key: str, icon_key: str = "") -> QAction:
+        action = QAction(icon(icon_key), text, self) if icon_key else QAction(text, self)
         seq = self._shortcuts.get(shortcut_key)
         if seq:
             action.setShortcut(seq)
-        self.addAction(action)  # Required: register on widget for shortcut to fire
+        self.addAction(action)
         return action
 
     def _refresh_all_shortcuts(self):
@@ -115,6 +116,7 @@ class MainWindow(QMainWindow):
         # Toolbar
         toolbar = QToolBar("Main")
         toolbar.setMovable(False)
+        toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         toolbar.addAction(self.action_open_folder)
         toolbar.addAction(self.action_extract_frames)
         toolbar.addSeparator()
@@ -134,11 +136,12 @@ class MainWindow(QMainWindow):
         # Prompt toolbar
         prompt_toolbar = QToolBar("Prompt")
         prompt_toolbar.setMovable(False)
-        self.action_prompt_click = QAction("Click Prompt", self)
+        prompt_toolbar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.action_prompt_click = QAction(icon("crosshair"), "Click Prompt", self)
         self.action_prompt_click.setCheckable(True)
-        self.action_prompt_box = QAction("Box Prompt", self)
+        self.action_prompt_box = QAction(icon("box_select"), "Box Prompt", self)
         self.action_prompt_box.setCheckable(True)
-        self.action_edit_mode = QAction("Edit Mode", self)
+        self.action_edit_mode = QAction(icon("edit"), "Edit Mode", self)
         self.action_edit_mode.setCheckable(True)
         self.action_edit_mode.setChecked(True)
         prompt_toolbar.addAction(self.action_prompt_click)
