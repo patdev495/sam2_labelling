@@ -27,6 +27,7 @@ from auto_labelling.widgets.timeline import TimelineWidget
 from auto_labelling.widgets.track_list import TrackListPanel
 from auto_labelling.widgets.properties import PropertiesPanel
 from auto_labelling.widgets.extract_dialog import ExtractDialog
+from auto_labelling.widgets.shortcuts_dialog import ShortcutSettingsDialog
 
 
 class MainWindow(QMainWindow):
@@ -50,34 +51,56 @@ class MainWindow(QMainWindow):
     # ---- UI Setup ----
 
     def _setup_actions(self):
-        self.action_open_folder = QAction("&Open Folder...", self)
-        self.action_open_folder.setShortcut(QKeySequence("Ctrl+O"))
+        sc = self._shortcuts
 
-        self.action_extract_frames = QAction("&Extract Frames...", self)
-        self.action_extract_frames.setShortcut(QKeySequence("Ctrl+E"))
-
-        self.action_auto_label = QAction("&Auto Label", self)
-        self.action_auto_label.setShortcut(QKeySequence("Ctrl+L"))
+        self.action_open_folder = self._make_action("&Open Folder...", "open_video")
+        self.action_extract_frames = self._make_action("&Extract Frames...", "extract_frames")
+        self.action_auto_label = self._make_action("&Auto Label", "auto_label")
         self.action_auto_label.setEnabled(False)
-
-        self.action_export = QAction("E&xport Labels", self)
-        self.action_export.setShortcut(QKeySequence("Ctrl+S"))
+        self.action_export = self._make_action("E&xport Labels", "save")
         self.action_export.setEnabled(False)
 
-        self.action_undo = QAction("&Undo", self)
-        self.action_undo.setShortcut(QKeySequence.Undo)
+        self.action_undo = self._make_action("&Undo", "undo")
         self.action_undo.setEnabled(False)
-
-        self.action_redo = QAction("&Redo", self)
-        self.action_redo.setShortcut(QKeySequence.Redo)
+        self.action_redo = self._make_action("&Redo", "redo")
         self.action_redo.setEnabled(False)
 
         self.action_toggle_masks = QAction("Show &Masks", self)
         self.action_toggle_masks.setCheckable(True)
         self.action_toggle_masks.setChecked(False)
 
+        # Frame navigation
+        self.action_next_frame = self._make_action("Next Frame", "next_frame")
+        self.action_prev_frame = self._make_action("Prev Frame", "prev_frame")
+        self.action_play_pause = self._make_action("Play/Pause", "play_pause")
+
+        # Box editing (context-sensitive, handled in _on_canvas_key_action)
+        self.action_delete_box = self._make_action("Delete Box", "delete_box")
+        self.action_draw_box = self._make_action("Draw Box", "draw_box")
+
+        self.action_shortcuts = QAction("Shortcuts...", self)
         self.action_quit = QAction("&Quit", self)
         self.action_quit.setShortcut(QKeySequence.Quit)
+
+    def _make_action(self, text: str, shortcut_key: str) -> QAction:
+        action = QAction(text, self)
+        seq = self._shortcuts.get(shortcut_key)
+        if seq:
+            action.setShortcut(seq)
+        return action
+
+    def _refresh_all_shortcuts(self):
+        self.action_open_folder.setShortcut(self._shortcuts.get("open_video"))
+        self.action_extract_frames.setShortcut(self._shortcuts.get("extract_frames"))
+        self.action_auto_label.setShortcut(self._shortcuts.get("auto_label"))
+        self.action_export.setShortcut(self._shortcuts.get("save"))
+        self.action_undo.setShortcut(self._shortcuts.get("undo"))
+        self.action_redo.setShortcut(self._shortcuts.get("redo"))
+        self.action_next_frame.setShortcut(self._shortcuts.get("next_frame"))
+        self.action_prev_frame.setShortcut(self._shortcuts.get("prev_frame"))
+        self.action_play_pause.setShortcut(self._shortcuts.get("play_pause"))
+        self.action_delete_box.setShortcut(self._shortcuts.get("delete_box"))
+        self.action_draw_box.setShortcut(self._shortcuts.get("draw_box"))
 
     def _setup_ui(self):
         central = QWidget()
@@ -97,6 +120,7 @@ class MainWindow(QMainWindow):
         toolbar.addAction(self.action_undo)
         toolbar.addAction(self.action_redo)
         toolbar.addSeparator()
+        toolbar.addAction(self.action_shortcuts)
 
         self._mode_label = QLabel("  Mode: View  ")
         toolbar.addWidget(self._mode_label)
@@ -173,7 +197,14 @@ class MainWindow(QMainWindow):
         self.action_undo.triggered.connect(self._on_undo)
         self.action_redo.triggered.connect(self._on_redo)
         self.action_toggle_masks.toggled.connect(self._canvas.set_show_masks)
+        self.action_shortcuts.triggered.connect(self._on_shortcuts_dialog)
         self.action_quit.triggered.connect(self.close)
+
+        self.action_next_frame.triggered.connect(lambda: self._on_frame_step(1))
+        self.action_prev_frame.triggered.connect(lambda: self._on_frame_step(-1))
+        self.action_play_pause.triggered.connect(self._on_play_pause)
+        self.action_delete_box.triggered.connect(self._on_delete_selected_box)
+        self.action_draw_box.triggered.connect(self._on_draw_box)
 
         self.action_prompt_click.triggered.connect(lambda: self._set_prompt_mode("click"))
         self.action_prompt_box.triggered.connect(lambda: self._set_prompt_mode("box"))
@@ -194,6 +225,7 @@ class MainWindow(QMainWindow):
         self._properties.go_to_frame.connect(self._on_go_to_frame)
 
         self._history.set_on_change(self._update_undo_redo_state)
+        self._shortcuts.shortcuts_changed.connect(self._refresh_all_shortcuts)
 
     # ---- Project Loading ----
 
@@ -420,6 +452,22 @@ class MainWindow(QMainWindow):
 
     # ---- Review / Edit ----
 
+    def _on_frame_step(self, delta: int):
+        new_frame = self._project.current_frame + delta
+        if 0 <= new_frame < self._project.frame_count:
+            self._timeline.set_current_frame(new_frame)
+            self._on_frame_changed(new_frame)
+
+    def _on_play_pause(self):
+        self._timeline.toggle_play()
+
+    def _on_delete_selected_box(self):
+        if self._canvas.mode == CanvasMode.EDIT:
+            self._canvas.delete_selected_boxes()
+
+    def _on_draw_box(self):
+        pass  # In Edit mode, just drag on canvas to draw a new box
+
     def _on_frame_changed(self, frame: int):
         self._project.current_frame = frame
         self._canvas.set_frame(frame)
@@ -540,6 +588,10 @@ class MainWindow(QMainWindow):
     def _update_status(self, msg: str):
         self._status_label.setText(msg)
         self.status_bar.showMessage(msg, 5000)
+
+    def _on_shortcuts_dialog(self):
+        dialog = ShortcutSettingsDialog(self._shortcuts, self)
+        dialog.exec()
 
     def closeEvent(self, event):
         if self._project.is_modified:

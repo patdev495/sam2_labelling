@@ -442,18 +442,12 @@ class CanvasWidget(QGraphicsView):
 
         super().mouseReleaseEvent(event)
 
-    def keyPressEvent(self, event: QKeyEvent):
-        if self._mode == CanvasMode.EDIT:
-            if event.key() == Qt.Key.Key_Delete or event.key() == Qt.Key.Key_Backspace:
-                for item in self._scene.selectedItems():
-                    if isinstance(item, BoxGraphicsItem):
-                        ann = item.track.get_annotation(item.frame_idx)
-                        if ann:
-                            item.track.remove_annotation(item.frame_idx)
-                            self._scene.removeItem(item)
-                            self.box_modified.emit(item.track, None)
-                        break
-                event.accept()
-                return
+    def delete_selected_boxes(self):
+        for item in list(self._scene.selectedItems()):
+            if isinstance(item, BoxGraphicsItem):
+                item.track.remove_annotation(item.frame_idx)
+                self._scene.removeItem(item)
+                self.box_modified.emit(item.track, None)
 
+    def keyPressEvent(self, event: QKeyEvent):
         super().keyPressEvent(event)

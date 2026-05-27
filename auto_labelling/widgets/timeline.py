@@ -68,6 +68,9 @@ class TimelineWidget(QWidget):
             self._update_label()
             self.frame_changed.emit(value)
 
+    def toggle_play(self):
+        self._on_play()
+
     def _on_play(self):
         self._playing = not self._playing
         if self._playing:
