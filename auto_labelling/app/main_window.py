@@ -87,6 +87,7 @@ class MainWindow(QMainWindow):
         seq = self._shortcuts.get(shortcut_key)
         if seq:
             action.setShortcut(seq)
+        self.addAction(action)  # Required: register on widget for shortcut to fire
         return action
 
     def _refresh_all_shortcuts(self):
