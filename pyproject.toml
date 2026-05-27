@@ -1,0 +1,23 @@
+[project]
+name = "auto_labelling"
+version = "0.1.0"
+description = "SAM 2 video labeling tool for YOLO detection training"
+requires-python = ">=3.10"
+dependencies = [
+    "pyside6>=6.5.0",
+    "opencv-python>=4.8.0",
+    "numpy>=1.24.0",
+    "Pillow>=10.0.0",
+]
+
+[project.optional-dependencies]
+ml = [
+    "torch>=2.1.0",
+    "torchvision>=0.16.0",
+]
+
+[project.scripts]
+auto-label = "auto_labelling.main:main"
+
+[dependency-groups]
+dev = []

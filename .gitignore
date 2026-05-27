@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Project
+.scratch/
+.masks/
+
+# SAM 2 checkpoints (large binary files)
+*.pt
+*.pth
+checkpoints/
