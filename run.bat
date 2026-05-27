@@ -1,4 +1,4 @@
 @echo off
 cd /d "%~dp0"
-uv run auto-label
+uv run python -m auto_labelling.main
 pause
