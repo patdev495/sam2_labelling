@@ -22,6 +22,7 @@ from auto_labelling.utils.commands import (
     MoveBoxCommand, ResizeBoxCommand, ChangeClassCommand,
 )
 from auto_labelling.utils.shortcuts import ShortcutManager
+from auto_labelling.utils.session import SessionManager
 from auto_labelling.widgets.canvas import CanvasWidget, CanvasMode
 from auto_labelling.widgets.timeline import TimelineWidget
 from auto_labelling.widgets.track_list import TrackListPanel
@@ -40,6 +41,7 @@ class MainWindow(QMainWindow):
         self._history = CommandHistory()
         self._sam = SAM2Service()
         self._shortcuts = ShortcutManager()
+        self._session = SessionManager()
 
         self._prompt_mode: str = "click"
 
@@ -47,6 +49,7 @@ class MainWindow(QMainWindow):
         self._setup_ui()
         self._setup_statusbar()
         self._connect_signals()
+        self._restore_session()
 
     # ---- UI Setup ----
 
@@ -228,6 +231,13 @@ class MainWindow(QMainWindow):
         self._history.set_on_change(self._update_undo_redo_state)
         self._shortcuts.shortcuts_changed.connect(self._refresh_all_shortcuts)
 
+    # ---- Session ----
+
+    def _restore_session(self):
+        last = self._session.last_folder
+        if last:
+            self._load_project(Path(last), restore_frame=True)
+
     # ---- Project Loading ----
 
     def _on_open_folder(self):
@@ -236,7 +246,7 @@ class MainWindow(QMainWindow):
             return
         self._load_project(Path(folder))
 
-    def _load_project(self, folder: Path):
+    def _load_project(self, folder: Path, restore_frame: bool = False):
         image_files = sorted([
             f.name for f in folder.iterdir()
             if f.suffix.lower() in SUPPORTED_IMAGE_EXTS
@@ -271,7 +281,17 @@ class MainWindow(QMainWindow):
 
         self._canvas.load_project(folder, image_files, img_size, tracks)
         self._timeline.set_frame_count(len(image_files))
-        self._timeline.set_current_frame(0)
+
+        # Restore last frame for this folder
+        start_frame = 0
+        if restore_frame:
+            cached = self._session.get_frame(folder)
+            if cached is not None and 0 <= cached < len(image_files):
+                start_frame = cached
+
+        self._timeline.set_current_frame(start_frame)
+        self._project.current_frame = start_frame
+
         self._track_list.set_tracks(tracks)
         self._properties.set_classes(self._project.classes)
         self._properties.set_annotation(None, None)
@@ -279,6 +299,8 @@ class MainWindow(QMainWindow):
 
         self.action_auto_label.setEnabled(True)
         self.action_export.setEnabled(True)
+
+        self._session.set_last_folder(folder)
         self._update_status(f"Loaded {len(image_files)} frames")
 
     def _load_existing_labels(self, folder: Path, frame_count: int,
@@ -595,6 +617,10 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def closeEvent(self, event):
+        # Save current position before closing
+        if self._project.image_dir:
+            self._session.set_frame(self._project.image_dir, self._project.current_frame)
+
         if self._project.is_modified:
             reply = QMessageBox.question(
                 self, "Unsaved Changes",
